@@ -333,7 +333,7 @@ input[type="range"] {
         
         <canvas id="videoCanvas" style="display:none;"></canvas>
         
-        <div id="title-watermark" class="overlay-info">TENG影片播放器w</div>
+        <div id="title-watermark" class="overlay-info">TENG影片播放器</div>
         <a id="image-tools-link" class="overlay-info" href="https://chia168168.github.io/TENG-image-tools-v3/">TENG圖片處理</a>
         
         <div class="controls-overlay" id="controlsOverlay"></div>
@@ -388,7 +388,7 @@ input[type="range"] {
 </div>
 
 <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.9/dist/ffmpeg.min.js"></script>
-<script type="text/javascript" src="https://unpkg.com/mediainfo.js"></script>
+<script src="https://unpkg.com/mediainfo.js"></script>
 
 <script>
     let mediainfoInstance = null;
@@ -532,8 +532,8 @@ input[type="range"] {
             console.log(`Detected FPS: ${detectedFps}. Set assumed FPS to: ${assumedFPS}`);
         }
         
-        // *** 修正：FFmpeg 物件載入等待函數 (輪詢機制) ***
-        function waitForFFmpeg(timeout = 5000, interval = 50) {
+        // *** 關鍵修正：FFmpeg 物件載入等待函數 (延長超時時間) ***
+        function waitForFFmpeg(timeout = 15000, interval = 50) { // 超時延長至 15000ms (15 秒)
             return new Promise((resolve, reject) => {
                 const startTime = Date.now();
                 const check = () => {
@@ -541,7 +541,8 @@ input[type="range"] {
                     if (typeof window.FFmpeg !== 'undefined' && typeof window.FFmpeg.createFFmpeg === 'function') {
                         resolve();
                     } else if (Date.now() - startTime > timeout) {
-                        reject(new Error("FFmpeg 物件在超時時間內 (5 秒) 未定義。請檢查 CDN 連線。"));
+                        // 輸出錯誤訊息時，更新超時時間
+                        reject(new Error("FFmpeg 物件在超時時間內 (15 秒) 未定義。請檢查 CDN 連線或網路速度。"));
                     } else {
                         // 繼續等待
                         setTimeout(check, interval);
@@ -560,7 +561,7 @@ input[type="range"] {
             transcodeProgressFill.style.width = `0%`;
             
             try {
-                // 1. 確保 window.FFmpeg 物件已載入
+                // 1. 確保 window.FFmpeg 物件已載入 (最長等待 15 秒)
                 await waitForFFmpeg(); 
                 
                 // 2. 使用 v0.12.9 的 createFFmpeg 實例化
