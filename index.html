@@ -387,7 +387,7 @@ input[type="range"] {
     </div>
 </div>
 
-<script src="https://app.unpkg.com/@ffmpeg/core@0.12.10/files/dist/umd/ffmpeg-core.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.min.js"></script>
 <script src="https://unpkg.com/mediainfo.js"></script>
 
 <script>
@@ -553,46 +553,46 @@ input[type="range"] {
         }
         
         // --- FFmpeg 核心載入函數 (變更 corePath) ---
-        async function loadFFmpeg() {
-            if (ffmpegLoaded) return true;
-            
-            transcodeOverlay.style.display = 'flex';
-            transcodeMessage.textContent = '載入 FFmpeg 核心檔案 (v0.12.15)...'; // 更新版本號
-            transcodeProgressFill.style.width = `0%`;
-            
-            try {
-                // 1. 確保 window.FFmpeg 物件已載入
-                await waitForFFmpeg(); 
-                
-                // 2. 使用 createFFmpeg 實例化
-                ffmpeg = window.FFmpeg.createFFmpeg({
-                    // *** 關鍵修正：將核心路徑從 jsdelivr 替換為 unpkg ***
-                    corePath: 'https://app.unpkg.com/@ffmpeg/core@0.12.10/files/dist/umd/ffmpeg-core.js',
-                });
-                
-                // 3. 註冊事件監聽器
-                ffmpeg.on('log', ({ message }) => console.log(message));
-                ffmpeg.on('progress', ({ ratio }) => {
-                    const percentage = Math.round(ratio * 100);
-                    transcodeProgressFill.style.width = `${percentage}%`;
-                    transcodeMessage.textContent = `轉碼中... ${percentage}% 完成`;
-                });
-                
-                // 4. 載入核心
-                await ffmpeg.load();
-                
-                ffmpegLoaded = true;
-                transcodeMessage.textContent = 'FFmpeg 核心載入完成，準備轉碼...';
-                
-                return true;
-            } catch (error) {
-                console.error("FFmpeg 載入失敗:", error);
-                // 提供錯誤訊息讓使用者知道載入失敗
-                transcodeMessage.textContent = `載入失敗。錯誤：${error.message}。請確認 FFmpeg v0.12.15 的核心檔案可載入。`;
-                setTimeout(() => transcodeOverlay.style.display = 'none', 5000);
-                return false;
-            }
-        }
+async function loadFFmpeg() {
+    if (ffmpegLoaded) return true;
+
+    transcodeOverlay.style.display = 'flex';
+    transcodeMessage.textContent = '載入 FFmpeg 核心檔案 (v0.12.10)...';
+    transcodeProgressFill.style.width = `0%`;
+
+    try {
+        await waitForFFmpeg();
+
+        const ffmpeg = window.FFmpeg.createFFmpeg({ log: true });
+        const coreBase = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm';
+
+        ffmpeg.on('log', ({ message }) => console.log(message));
+        ffmpeg.on('progress', ({ ratio }) => {
+            const percentage = Math.round(ratio * 100);
+            transcodeProgressFill.style.width = `${percentage}%`;
+            transcodeMessage.textContent = `轉碼中... ${percentage}% 完成`;
+        });
+
+        await ffmpeg.load({
+            coreURL: `${coreBase}/ffmpeg-core.js`,
+            wasmURL: `${coreBase}/ffmpeg-core.wasm`
+        });
+
+        ffmpegLoaded = true;
+        transcodeMessage.textContent = 'FFmpeg 核心載入完成，準備轉碼…';
+
+        // 如果你需要在全域使用 ffmpeg，記得把 ffmpeg 實例儲存起來
+        window._myFFmpegInstance = ffmpeg;
+
+        return true;
+    } catch (error) {
+        console.error("FFmpeg 載入失敗:", error);
+        transcodeMessage.textContent = `載入失敗。錯誤：${error.message}。`;
+        setTimeout(() => transcodeOverlay.style.display = 'none', 5000);
+        return false;
+    }
+}
+
 
         // --- FFmpeg 轉碼函數 ---
         async function transcodeFile(file) {
