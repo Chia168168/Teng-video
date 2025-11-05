@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>TENG影片播放器</title>
+    <title>TENG影片播放器 wmv</title>
     <style>
 /* ------------------------------------------------ */
 /* 核心樣式：確保內容始終在瀏覽器安全區內 */
@@ -532,7 +532,7 @@ input[type="range"] {
             console.log(`Detected FPS: ${detectedFps}. Set assumed FPS to: ${assumedFPS}`);
         }
         
-        // --- FFmpeg 核心函數 (已修改，強制使用 v0.11.6 單執行緒核心) ---
+        // --- FFmpeg 核心函數 (已修正 FFmpeg 實例化方式) ---
         async function loadFFmpeg() {
             if (ffmpegLoaded) return true;
             
@@ -546,8 +546,8 @@ input[type="range"] {
                     throw new Error("您的瀏覽器可能不支援 WebAssembly。");
                 }
 
-                // 初始化 FFmpeg 實例
-                ffmpeg = new FFmpeg.FFmpeg();
+                // *** 關鍵修正：FFmpeg 實例化方式改為 new FFmpeg() ***
+                ffmpeg = new FFmpeg();
                 
                 // 設定進度報告
                 ffmpeg.on('log', ({ message }) => console.log(message));
@@ -557,7 +557,7 @@ input[type="range"] {
                     transcodeMessage.textContent = `轉碼中... ${percentage}% 完成`;
                 });
                 
-                // *** 關鍵修改：明確指定單執行緒核心檔案路徑，使用對環境要求最低的 v0.11.6 版本 ***
+                // 明確指定單執行緒核心檔案路徑，使用對環境要求最低的 v0.11.6 版本 
                 await ffmpeg.load({
                     coreURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.6/dist/ffmpeg-core.js',
                     wasmURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.6/dist/ffmpeg-core.wasm',
@@ -571,7 +571,7 @@ input[type="range"] {
             } catch (error) {
                 console.error("FFmpeg 載入失敗:", error);
                 // 針對 GitHub Pages 環境提供具體提示
-                transcodeMessage.textContent = `載入失敗。請檢查您的瀏覽器控制台是否有 CORS/Worker 錯誤。`;
+                transcodeMessage.textContent = `載入失敗。請檢查您的瀏覽器控制台是否有 CORS/Worker 錯誤。錯誤：${error.message}`;
                 setTimeout(() => transcodeOverlay.style.display = 'none', 5000);
                 return false;
             }
