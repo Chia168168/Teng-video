@@ -263,7 +263,7 @@ input[type="range"] {
     display: none; 
 }
 
-/* --- FFmpeg 轉碼介面樣式 (確保它們存在) --- */
+/* --- FFmpeg 轉碼介面樣式 (已重新加入) --- */
 .transcode-overlay {
     position: absolute;
     top: 0;
@@ -333,7 +333,7 @@ input[type="range"] {
         
         <canvas id="videoCanvas" style="display:none;"></canvas>
         
-        <div id="title-watermark" class="overlay-info">TENG影片播放器w</div>
+        <div id="title-watermark" class="overlay-info">TENG影片播放器</div>
         <a id="image-tools-link" class="overlay-info" href="https://chia168168.github.io/TENG-image-tools-v3/">TENG圖片處理</a>
         
         <div class="controls-overlay" id="controlsOverlay"></div>
@@ -532,7 +532,7 @@ input[type="range"] {
             console.log(`Detected FPS: ${detectedFps}. Set assumed FPS to: ${assumedFPS}`);
         }
         
-        // *** 關鍵：FFmpeg 物件載入等待函數 (確保存在) ***
+        // *** 關鍵：FFmpeg 物件載入等待函數 (已重新加入) ***
         function waitForFFmpeg(timeout = 15000, interval = 50) { 
             return new Promise((resolve, reject) => {
                 const startTime = Date.now();
@@ -552,7 +552,7 @@ input[type="range"] {
             });
         }
         
-        // --- FFmpeg 核心載入函數 (已更新 corePath 版本) ---
+        // --- FFmpeg 核心載入函數 (已重新加入) ---
         async function loadFFmpeg() {
             if (ffmpegLoaded) return true;
             
