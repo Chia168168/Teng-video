@@ -387,8 +387,12 @@ input[type="range"] {
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.min.js"></script>
+<!-- 主程式 (UMD) -->
+<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/ffmpeg.min.js"></script>
+
+<!-- 可選：MediaInfo -->
 <script src="https://unpkg.com/mediainfo.js"></script>
+
 
 <script>
     let mediainfoInstance = null;
@@ -554,45 +558,39 @@ input[type="range"] {
         
         // --- FFmpeg 核心載入函數 (變更 corePath) ---
 async function loadFFmpeg() {
-    if (ffmpegLoaded) return true;
+  if (ffmpegLoaded) return true;
 
-    transcodeOverlay.style.display = 'flex';
-    transcodeMessage.textContent = '載入 FFmpeg 核心檔案 (v0.12.10)...';
-    transcodeProgressFill.style.width = `0%`;
+  transcodeOverlay.style.display = 'flex';
+  transcodeMessage.textContent = '載入 FFmpeg 核心檔案 (v0.12.10-mt)...';
+  transcodeProgressFill.style.width = `0%`;
 
-    try {
-        await waitForFFmpeg();
+  try {
+    await waitForFFmpeg();
 
-        const ffmpeg = window.FFmpeg.createFFmpeg({ log: true });
-        const coreBase = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm';
+    const ffmpeg = window.FFmpeg.createFFmpeg({
+      corePath: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.10/dist/ffmpeg-core.js',
+      log: true
+    });
 
-        ffmpeg.on('log', ({ message }) => console.log(message));
-        ffmpeg.on('progress', ({ ratio }) => {
-            const percentage = Math.round(ratio * 100);
-            transcodeProgressFill.style.width = `${percentage}%`;
-            transcodeMessage.textContent = `轉碼中... ${percentage}% 完成`;
-        });
+    ffmpeg.on('log', ({ message }) => console.log(message));
+    ffmpeg.on('progress', ({ ratio }) => {
+      const percentage = Math.round(ratio * 100);
+      transcodeProgressFill.style.width = `${percentage}%`;
+      transcodeMessage.textContent = `轉碼中... ${percentage}% 完成`;
+    });
 
-        await ffmpeg.load({
-            coreURL: `${coreBase}/ffmpeg-core.js`,
-            wasmURL: `${coreBase}/ffmpeg-core.wasm`
-        });
-
-        ffmpegLoaded = true;
-        transcodeMessage.textContent = 'FFmpeg 核心載入完成，準備轉碼…';
-
-        // 如果你需要在全域使用 ffmpeg，記得把 ffmpeg 實例儲存起來
-        window._myFFmpegInstance = ffmpeg;
-
-        return true;
-    } catch (error) {
-        console.error("FFmpeg 載入失敗:", error);
-        transcodeMessage.textContent = `載入失敗。錯誤：${error.message}。`;
-        setTimeout(() => transcodeOverlay.style.display = 'none', 5000);
-        return false;
-    }
+    await ffmpeg.load();
+    ffmpegLoaded = true;
+    transcodeMessage.textContent = 'FFmpeg 核心載入完成 ✅';
+    window._myFFmpegInstance = ffmpeg;
+    return true;
+  } catch (error) {
+    console.error("FFmpeg 載入失敗:", error);
+    transcodeMessage.textContent = `載入失敗：${error.message}`;
+    setTimeout(() => transcodeOverlay.style.display = 'none', 5000);
+    return false;
+  }
 }
-
 
         // --- FFmpeg 轉碼函數 ---
         async function transcodeFile(file) {
