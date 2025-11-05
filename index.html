@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>TENG影片播放器 wmv</title>
+    <title>TENG影片播放器</title>
     <style>
 /* ------------------------------------------------ */
 /* 核心樣式：確保內容始終在瀏覽器安全區內 */
@@ -333,7 +333,7 @@ input[type="range"] {
         
         <canvas id="videoCanvas" style="display:none;"></canvas>
         
-        <div id="title-watermark" class="overlay-info">TENG影片播放器</div>
+        <div id="title-watermark" class="overlay-info">TENG影片播放器wmv</div>
         <a id="image-tools-link" class="overlay-info" href="https://chia168168.github.io/TENG-image-tools-v3/">TENG圖片處理</a>
         
         <div class="controls-overlay" id="controlsOverlay"></div>
@@ -542,12 +542,19 @@ input[type="range"] {
             
             try {
                 // 檢查瀏覽器是否支援 WebAssembly
-                if (typeof FFmpeg === 'undefined') {
-                    throw new Error("您的瀏覽器可能不支援 WebAssembly。");
+                if (typeof window.FFmpeg === 'undefined') {
+                    throw new Error("FFmpeg 物件未定義，請檢查腳本是否載入失敗。");
                 }
-
-                // *** 關鍵修正：FFmpeg 實例化方式改為 new FFmpeg() ***
-                ffmpeg = new FFmpeg();
+                
+                // *** 關鍵修正：透過檢查 FFmpeg.FFmpeg 或 FFmpeg 來找到真正的 constructor ***
+                const FFmpegConstructor = window.FFmpeg.FFmpeg || window.FFmpeg; 
+                
+                if (typeof FFmpegConstructor !== 'function') {
+                    throw new TypeError("FFmpeg 物件已載入，但不是一個可實例化的 constructor。");
+                }
+                
+                // 實例化 FFmpeg
+                ffmpeg = new FFmpegConstructor();
                 
                 // 設定進度報告
                 ffmpeg.on('log', ({ message }) => console.log(message));
