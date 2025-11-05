@@ -263,7 +263,7 @@ input[type="range"] {
     display: none; 
 }
 
-/* --- FFmpeg 轉碼介面樣式 (新增) --- */
+/* --- FFmpeg 轉碼介面樣式 --- */
 .transcode-overlay {
     position: absolute;
     top: 0;
@@ -387,7 +387,7 @@ input[type="range"] {
     </div>
 </div>
 
-<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.7/dist/ffmpeg.min.js"></script>
+<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
 <script type="text/javascript" src="https://unpkg.com/mediainfo.js"></script>
 
 <script>
@@ -532,7 +532,7 @@ input[type="range"] {
             console.log(`Detected FPS: ${detectedFps}. Set assumed FPS to: ${assumedFPS}`);
         }
         
-        // --- FFmpeg 核心函數 (已修改，強制使用單執行緒核心) ---
+        // --- FFmpeg 核心函數 (已修改，強制使用 v0.11.6 單執行緒核心) ---
         async function loadFFmpeg() {
             if (ffmpegLoaded) return true;
             
@@ -557,12 +557,11 @@ input[type="range"] {
                     transcodeMessage.textContent = `轉碼中... ${percentage}% 完成`;
                 });
                 
-                // *** 關鍵修改：明確指定單執行緒核心檔案路徑，以確保在 GitHub Pages 上運作 ***
-                // 這些檔案不依賴 SharedArrayBuffer 或 COOP/COEP 標頭。
+                // *** 關鍵修改：明確指定單執行緒核心檔案路徑，使用對環境要求最低的 v0.11.6 版本 ***
                 await ffmpeg.load({
-                    coreURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.7/dist/ffmpeg-core.js',
-                    wasmURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.7/dist/ffmpeg-core.wasm',
-                    workerURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.7/dist/ffmpeg-core.worker.js',
+                    coreURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.6/dist/ffmpeg-core.js',
+                    wasmURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.6/dist/ffmpeg-core.wasm',
+                    workerURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.6/dist/ffmpeg-core.worker.js',
                 }); 
                 
                 ffmpegLoaded = true;
@@ -571,7 +570,8 @@ input[type="range"] {
                 return true;
             } catch (error) {
                 console.error("FFmpeg 載入失敗:", error);
-                transcodeMessage.textContent = `轉碼器載入失敗：${error.message} (請確認在 Web Server/GitHub Pages 上運行)。`;
+                // 針對 GitHub Pages 環境提供具體提示
+                transcodeMessage.textContent = `載入失敗。請檢查您的瀏覽器控制台是否有 CORS/Worker 錯誤。`;
                 setTimeout(() => transcodeOverlay.style.display = 'none', 5000);
                 return false;
             }
@@ -612,7 +612,7 @@ input[type="range"] {
                 const blob = new Blob([outputData.buffer], { type: 'video/mp4' });
                 const fileURL = URL.createObjectURL(blob);
                 
-                // 5. 清理虛擬檔案系統 (可選，但在單執行緒模式下資源較有限，推薦清理)
+                // 5. 清理虛擬檔案系統
                 await ffmpeg.deleteFile(inputFileName);
                 await ffmpeg.deleteFile(outputFileName);
 
