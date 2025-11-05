@@ -333,7 +333,7 @@ input[type="range"] {
         
         <canvas id="videoCanvas" style="display:none;"></canvas>
         
-        <div id="title-watermark" class="overlay-info">TENG影片播放器</div>
+        <div id="title-watermark" class="overlay-info">TENG影片播放器w</div>
         <a id="image-tools-link" class="overlay-info" href="https://chia168168.github.io/TENG-image-tools-v3/">TENG圖片處理</a>
         
         <div class="controls-overlay" id="controlsOverlay"></div>
@@ -532,7 +532,7 @@ input[type="range"] {
             console.log(`Detected FPS: ${detectedFps}. Set assumed FPS to: ${assumedFPS}`);
         }
         
-        // --- FFmpeg 核心函數 (已修正 FFmpeg 實例化方式) ---
+        // --- FFmpeg 核心函數 (已加入延遲修復 race condition) ---
         async function loadFFmpeg() {
             if (ffmpegLoaded) return true;
             
@@ -541,24 +541,25 @@ input[type="range"] {
             transcodeProgressFill.style.width = `0%`;
             
             try {
-                // 檢查瀏覽器是否支援 WebAssembly
+                // 檢查 FFmpeg 物件是否已載入
                 if (typeof window.FFmpeg === 'undefined') {
                     throw new Error("FFmpeg 物件未定義，請檢查腳本是否載入失敗。");
                 }
                 
-                // *** 關鍵修正：最穩健地尋找 FFmpeg 建構函式 (v0.11.6 UMD 兼容) ***
+                // *** 關鍵修正：新增 50ms 延遲，確保 UMD 腳本完全初始化所有屬性 (解決 race condition) ***
+                await new Promise(resolve => setTimeout(resolve, 50)); 
+                
+                // 尋找 FFmpeg 建構函式
                 let FFmpegConstructor = null;
                 
                 if (typeof window.FFmpeg === 'function') {
-                    FFmpegConstructor = window.FFmpeg; // 優先：FFmpeg 直接是建構函式 (標準方式)
+                    FFmpegConstructor = window.FFmpeg; // 1. FFmpeg 直接是建構函式
                 } else if (window.FFmpeg && typeof window.FFmpeg.FFmpeg === 'function') {
-                    FFmpegConstructor = window.FFmpeg.FFmpeg; // 次要：FFmpeg 建構函式被巢狀包裹
-                } else if (window.FFmpeg && typeof window.FFmpeg.default === 'function') {
-                    FFmpegConstructor = window.FFmpeg.default; // 備選：UMD/ESM 預設導出
+                    FFmpegConstructor = window.FFmpeg.FFmpeg; // 2. FFmpeg 建構函式被巢狀包裹
                 }
                 
                 if (!FFmpegConstructor) {
-                    throw new TypeError("FFmpeg 物件已載入，但無法確認建構函式。請檢查瀏覽器控制台中的 'window.FFmpeg' 結構。");
+                    throw new TypeError(`FFmpeg 物件結構不符預期，typeof window.FFmpeg: ${typeof window.FFmpeg}，請檢查瀏覽器控制台。`);
                 }
                 
                 // 實例化 FFmpeg
