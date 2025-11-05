@@ -387,7 +387,7 @@ input[type="range"] {
     </div>
 </div>
 
-<script src="https://app.unpkg.com/@ffmpeg/core@0.12.10/files/dist/umd/ffmpeg-core.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ffmpeg/0.12.15/umd/ffmpeg.min.js"></script>
 <script src="https://unpkg.com/mediainfo.js"></script>
 
 <script>
@@ -424,7 +424,7 @@ input[type="range"] {
         const speedOptions = speedMenu.querySelectorAll('button');
         const videoDisplay = document.getElementById('videoDisplay'); 
         
-        // 新增 FFmpeg 相關 DOM 元素
+        // FFmpeg 相關 DOM 元素
         const transcodeOverlay = document.getElementById('transcodeOverlay');
         const transcodeMessage = document.getElementById('transcodeMessage');
         const transcodeProgressFill = document.getElementById('transcodeProgressFill');
@@ -532,7 +532,7 @@ input[type="range"] {
             console.log(`Detected FPS: ${detectedFps}. Set assumed FPS to: ${assumedFPS}`);
         }
         
-        // *** 關鍵：FFmpeg 物件載入等待函數 (已補回) ***
+        // FFmpeg 物件載入等待函數
         function waitForFFmpeg(timeout = 15000, interval = 50) { 
             return new Promise((resolve, reject) => {
                 const startTime = Date.now();
@@ -552,7 +552,7 @@ input[type="range"] {
             });
         }
         
-        // --- FFmpeg 核心載入函數 (已補回) ---
+        // --- FFmpeg 核心載入函數 (變更 corePath) ---
         async function loadFFmpeg() {
             if (ffmpegLoaded) return true;
             
@@ -566,8 +566,8 @@ input[type="range"] {
                 
                 // 2. 使用 createFFmpeg 實例化
                 ffmpeg = window.FFmpeg.createFFmpeg({
-                    // 核心路徑使用可靠的 jsdelivr CDN，版本號更新為 0.12.15
-                    corePath: 'https://app.unpkg.com/@ffmpeg/core@0.12.10/files/dist/umd/ffmpeg-core.js',
+                    // *** 關鍵修正：將核心路徑從 jsdelivr 替換為 unpkg ***
+                    corePath: 'https://unpkg.com/@ffmpeg/core@0.12.15/dist/ffmpeg-core.js',
                 });
                 
                 // 3. 註冊事件監聽器
@@ -594,7 +594,7 @@ input[type="range"] {
             }
         }
 
-        // --- FFmpeg 轉碼函數 (已補回) ---
+        // --- FFmpeg 轉碼函數 ---
         async function transcodeFile(file) {
             
             if (!await loadFFmpeg()) return null;
@@ -693,7 +693,6 @@ input[type="range"] {
                                       
             
             if (requiresTranscode) {
-                // *** 關鍵：在此處調用 FFmpeg 轉碼 (已補回) ***
                 transcodeMessage.textContent = `偵測到不相容格式 (${originalFile.name})，正在啟動轉碼...`;
                 transcodeOverlay.style.display = 'flex';
                 const result = await transcodeFile(originalFile); // 執行轉碼
