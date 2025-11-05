@@ -263,7 +263,7 @@ input[type="range"] {
     display: none; 
 }
 
-/* --- FFmpeg 轉碼介面樣式 --- */
+/* --- FFmpeg 轉碼介面樣式 (確保它們存在) --- */
 .transcode-overlay {
     position: absolute;
     top: 0;
@@ -333,7 +333,7 @@ input[type="range"] {
         
         <canvas id="videoCanvas" style="display:none;"></canvas>
         
-        <div id="title-watermark" class="overlay-info">TENG影片播放器</div>
+        <div id="title-watermark" class="overlay-info">TENG影片播放器w</div>
         <a id="image-tools-link" class="overlay-info" href="https://chia168168.github.io/TENG-image-tools-v3/">TENG圖片處理</a>
         
         <div class="controls-overlay" id="controlsOverlay"></div>
@@ -532,8 +532,8 @@ input[type="range"] {
             console.log(`Detected FPS: ${detectedFps}. Set assumed FPS to: ${assumedFPS}`);
         }
         
-        // *** 關鍵修正：FFmpeg 物件載入等待函數 (延長超時時間) ***
-        function waitForFFmpeg(timeout = 15000, interval = 50) { // 超時延長至 15000ms (15 秒)
+        // *** 關鍵：FFmpeg 物件載入等待函數 (確保存在) ***
+        function waitForFFmpeg(timeout = 15000, interval = 50) { 
             return new Promise((resolve, reject) => {
                 const startTime = Date.now();
                 const check = () => {
@@ -552,25 +552,25 @@ input[type="range"] {
             });
         }
         
-        // --- FFmpeg 核心函數 (強化載入機制) ---
+        // --- FFmpeg 核心載入函數 (已更新 corePath 版本) ---
         async function loadFFmpeg() {
             if (ffmpegLoaded) return true;
             
             transcodeOverlay.style.display = 'flex';
-            transcodeMessage.textContent = '載入 FFmpeg 核心檔案 (v0.12.9)...';
+            transcodeMessage.textContent = '載入 FFmpeg 核心檔案 (v0.12.15)...'; // 更新版本號
             transcodeProgressFill.style.width = `0%`;
             
             try {
-                // 1. 確保 window.FFmpeg 物件已載入 (最長等待 15 秒)
+                // 1. 確保 window.FFmpeg 物件已載入
                 await waitForFFmpeg(); 
                 
-                // 2. 使用 v0.12.9 的 createFFmpeg 實例化
+                // 2. 使用 createFFmpeg 實例化
                 ffmpeg = window.FFmpeg.createFFmpeg({
-                    // 使用 v0.12.9 正確的核心 CDN 路徑
-                    corePath: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.9/dist/ffmpeg-core.js',
+                    // 核心路徑使用可靠的 jsdelivr CDN，版本號更新為 0.12.15
+                    corePath: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.15/dist/ffmpeg-core.js',
                 });
                 
-                // 3. 使用 v0.12.9 API (.on) 註冊事件監聽器
+                // 3. 註冊事件監聽器
                 ffmpeg.on('log', ({ message }) => console.log(message));
                 ffmpeg.on('progress', ({ ratio }) => {
                     const percentage = Math.round(ratio * 100);
@@ -588,12 +588,13 @@ input[type="range"] {
             } catch (error) {
                 console.error("FFmpeg 載入失敗:", error);
                 // 提供錯誤訊息讓使用者知道載入失敗
-                transcodeMessage.textContent = `載入失敗。請檢查您的瀏覽器控制台是否有 CORS/Worker 錯誤。錯誤：${error.message}`;
+                transcodeMessage.textContent = `載入失敗。錯誤：${error.message}。請確認 FFmpeg v0.12.15 的核心檔案可載入。`;
                 setTimeout(() => transcodeOverlay.style.display = 'none', 5000);
                 return false;
             }
         }
 
+        // --- FFmpeg 轉碼函數 (已重新加入) ---
         async function transcodeFile(file) {
             
             if (!await loadFFmpeg()) return null;
@@ -610,12 +611,12 @@ input[type="range"] {
                 transcodeMessage.textContent = `正在轉碼至 MP4 格式...`;
                 transcodeProgressFill.style.width = `0%`;
 
-                // 2. 執行轉碼命令 (v0.12.9)
+                // 2. 執行轉碼命令
                 await ffmpeg.run(
                     '-i', inputFileName, 
                     '-c:v', 'libx264',   
-                    '-preset', 'veryfast', // 快速設定以加快瀏覽器內轉碼速度
-                    '-crf', '28',        // 較高的 CRF (28) 代表較低的品質但較小的檔案，適合網頁
+                    '-preset', 'veryfast', 
+                    '-crf', '28',        
                     '-c:a', 'aac',       
                     '-b:a', '128k',      
                     outputFileName
