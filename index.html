@@ -6,7 +6,7 @@
     <title>TENG影片播放器</title>
     <style>
 /* ------------------------------------------------ */
-/* 核心樣式：確保內容始終在瀏覽器安全區内 */
+/* 核心樣式：確保內容始終在瀏覽器安全區內 */
 /* ------------------------------------------------ */
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -18,7 +18,7 @@ body {
     background-color: #f0f0f0;
     user-select: none;
     
-    /* 讓内容避開底部的系統工具欄/Home Bar */
+    /* 讓內容避開底部的系統工具欄/Home Bar */
     padding-bottom: constant(safe-area-inset-bottom);
     padding-bottom: env(safe-area-inset-bottom);
     
@@ -387,7 +387,7 @@ input[type="range"] {
     </div>
 </div>
 
-<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.7/dist/ffmpeg.min.js"></script>
+<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
 <script type="text/javascript" src="https://unpkg.com/mediainfo.js"></script>
 
 <script>
@@ -532,60 +532,47 @@ input[type="range"] {
             console.log(`Detected FPS: ${detectedFps}. Set assumed FPS to: ${assumedFPS}`);
         }
         
-        // --- FFmpeg 核心函數 (使用 v0.12.7 + 延遲 + 修正的建構函式查找) ---
+        // --- FFmpeg 核心函數 (使用 v0.11.6 + 延遲 + 修正的建構函式查找) ---
         async function loadFFmpeg() {
             if (ffmpegLoaded) return true;
             
             transcodeOverlay.style.display = 'flex';
-            transcodeMessage.textContent = '載入 FFmpeg 核心檔案 (v0.12)...';
+            transcodeMessage.textContent = '載入 FFmpeg 核心檔案 (v0.11.6)...';
             transcodeProgressFill.style.width = `0%`;
             
             try {
-                // 檢查 FFmpeg 物件是否已載入
-                if (typeof window.FFmpeg === 'undefined') {
-                    throw new Error("FFmpeg 物件未定義，請檢查腳本是否載入失敗。");
+                // *** 關鍵修正 2: 檢查 v0.11.6 的 'createFFmpeg' ***
+                // v0.11.6 的正確用法是 `createFFmpeg`，它會返回一個 Promise
+                if (typeof window.FFmpeg === 'undefined' || typeof window.FFmpeg.createFFmpeg !== 'function') {
+                    // 增加 100ms 延遲，確保 UMD 腳本完全初始化所有屬性 (解決 race condition)
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
+                    if (typeof window.FFmpeg === 'undefined' || typeof window.FFmpeg.createFFmpeg !== 'function') {
+                        throw new Error("FFmpeg 物件或 createFFmpeg 函式未定義。");
+                    }
                 }
                 
-                // *** 關鍵修正 2: 增加延遲到 100ms，確保 UMD 腳本完全初始化所有屬性 ***
-                await new Promise(resolve => setTimeout(resolve, 100)); 
+                // *** 關鍵修正 3: 使用 v0.11.6 的 createFFmpeg 實例化 ***
+                ffmpeg = window.FFmpeg.createFFmpeg({
+                    // 明確指定單執行緒核心檔案路徑
+                    corePath: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.6/dist/ffmpeg-core.js',
+                });
                 
-                // *** 關鍵修正 3: 修正的建構函式查找順序 (優先查找 v0.12.x 的 .FFmpeg) ***
-                let FFmpegConstructor = null;
-                
-                if (window.FFmpeg && typeof window.FFmpeg.FFmpeg === 'function') {
-                    FFmpegConstructor = window.FFmpeg.FFmpeg; // 1. (v0.12.x 標準)
-                } else if (typeof window.FFmpeg === 'function') {
-                    FFmpegConstructor = window.FFmpeg; // 2. (v0.11.x 標準)
-                } else if (window.FFmpeg && typeof window.FFmpeg.default === 'function') { 
-                    FFmpegConstructor = window.FFmpeg.default; // 3. (UMD/ESM 預設導出)
-                }
-                
-                if (!FFmpegConstructor) {
-                    throw new TypeError(`FFmpeg 物件結構不符預期 (typeof window.FFmpeg: ${typeof window.FFmpeg})`);
-                }
-                
-                // 實例化 FFmpeg
-                ffmpeg = new FFmpegConstructor();
-                
-                // *** 關鍵修正 4: 檢查 .on 方法是否存在 ***
+                // *** 關鍵修正 4: v0.11.6 的事件監聽器是 .on() ***
                 if (typeof ffmpeg.on !== 'function') {
-                    throw new TypeError("實例化的 FFmpeg 物件沒有 .on() 方法。找到了錯誤的建構函式。");
+                    throw new TypeError("實例化的 FFmpeg 物件沒有 .on() 方法。");
                 }
 
                 // 設定進度報告
                 ffmpeg.on('log', ({ message }) => console.log(message));
-                ffmpeg.on('progress', ({ progress }) => {
-                    const percentage = Math.round(progress * 100);
+                ffmpeg.on('progress', ({ ratio }) => {
+                    const percentage = Math.round(ratio * 100);
                     transcodeProgressFill.style.width = `${percentage}%`;
                     transcodeMessage.textContent = `轉碼中... ${percentage}% 完成`;
                 });
                 
-                // *** 關鍵修正 5: 使用 v0.12.7 的單執行緒核心 (GitHub Pages 兼容) ***
-                await ffmpeg.load({
-                    coreURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.7/dist/ffmpeg-core.js',
-                    wasmURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.7/dist/ffmpeg-core.wasm',
-                    workerURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.7/dist/ffmpeg-core.worker.js',
-                }); 
+                // *** 關鍵修正 5: v0.11.6 使用 ffmpeg.load() ***
+                await ffmpeg.load();
                 
                 ffmpegLoaded = true;
                 transcodeMessage.textContent = 'FFmpeg 核心載入完成，準備轉碼...';
@@ -610,34 +597,33 @@ input[type="range"] {
             transcodeMessage.textContent = `正在準備檔案，請稍候...`;
 
             try {
-                // 1. 寫入檔案到 FFmpeg 虛擬檔案系統
-                const data = new Uint8Array(await file.arrayBuffer());
-                await ffmpeg.writeFile(inputFileName, data);
+                // 1. 寫入檔案到 FFmpeg 虛擬檔案系統 (v0.11.6 使用 FS)
+                await ffmpeg.FS('writeFile', inputFileName, new Uint8Array(await file.arrayBuffer()));
                 
                 transcodeMessage.textContent = `正在轉碼至 MP4 格式...`;
                 transcodeProgressFill.style.width = `0%`;
 
-                // 2. 執行轉碼命令 (將輸入檔案轉換為 h.264 MP4)
-                await ffmpeg.exec([
+                // 2. 執行轉碼命令 (v0.11.6 使用 run)
+                await ffmpeg.run(
                     '-i', inputFileName, 
                     '-c:v', 'libx264',   
                     '-preset', 'veryfast', // 快速設定以加快瀏覽器內轉碼速度
                     '-crf', '28',        // 較高的 CRF (28) 代表較低的品質但較小的檔案，適合網頁
                     '-c:a', 'aac',       
                     '-b:a', '128k',      
-                    outputFileName       
-                ]);
+                    outputFileName
+                );
                 
-                // 3. 從虛擬檔案系統讀取結果檔案
-                const outputData = await ffmpeg.readFile(outputFileName);
+                // 3. 從虛擬檔案系統讀取結果檔案 (v0.11.6 使用 FS)
+                const outputData = await ffmpeg.FS('readFile', outputFileName);
                 
                 // 4. 建立 Blob 和 URL
                 const blob = new Blob([outputData.buffer], { type: 'video/mp4' });
                 const fileURL = URL.createObjectURL(blob);
                 
-                // 5. 清理虛擬檔案系統
-                await ffmpeg.deleteFile(inputFileName);
-                await ffmpeg.deleteFile(outputFileName);
+                // 5. 清理虛擬檔案系統 (v0.11.6 使用 FS)
+                await ffmpeg.FS('unlink', inputFileName);
+                await ffmpeg.FS('unlink', outputFileName);
 
                 // 6. 隱藏轉碼介面
                 transcodeOverlay.style.display = 'none';
