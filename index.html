@@ -559,7 +559,8 @@ input[type="range"] {
                 
                 await ffmpeg.load({
                      // 這是 FFmpeg.wasm 核心檔案的 URL
-                    coreURL: 'https://unpkg.com/@ffmpeg/core@0.12.7/dist/ffmpeg-core.js',
+                coreURL: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js',
+                     // 雖然核心版本改變，但 @ffmpeg/ffmpeg (包裝層) 仍使用 0.12.7 即可
                 }); 
                 
                 ffmpegLoaded = true;
