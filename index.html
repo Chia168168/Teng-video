@@ -565,43 +565,46 @@ async function loadFFmpeg() {
   transcodeProgressFill.style.width = `0%`;
 
   try {
-    // 等待 FFmpeg 主程式就緒
+    // 確保主程式已載入
     await new Promise((resolve, reject) => {
       const start = Date.now();
       (function check() {
         if (window.FFmpeg?.createFFmpeg) return resolve();
-        if (Date.now() - start > 15000) return reject(new Error("FFmpeg 主程式載入超時"));
+        if (Date.now() - start > 15000)
+          return reject(new Error("FFmpeg 主程式載入超時"));
         setTimeout(check, 200);
       })();
     });
 
+    // ✅ v0.11.6 寫法：on() 已拿掉，要用 progress callback
     const ffmpeg = window.FFmpeg.createFFmpeg({
       log: true,
-      corePath: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.6/dist/ffmpeg-core.js',
+      corePath:
+        "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.6/dist/ffmpeg-core.js",
+      progress: ({ ratio }) => {
+        const percentage = Math.round(ratio * 100);
+        transcodeProgressFill.style.width = `${percentage}%`;
+        transcodeMessage.textContent = `轉碼中... ${percentage}% 完成`;
+      },
     });
 
-    ffmpeg.on('progress', ({ ratio }) => {
-      const percentage = Math.round(ratio * 100);
-      transcodeProgressFill.style.width = `${percentage}%`;
-      transcodeMessage.textContent = `轉碼中... ${percentage}% 完成`;
-    });
-
-    ffmpeg.on('log', ({ message }) => console.log(message));
-
+    // log 用 console 自行接
+    console.log("⏳ 載入 FFmpeg 核心...");
     await ffmpeg.load();
+    console.log("✅ FFmpeg 核心載入完成");
+    transcodeMessage.textContent = "FFmpeg 核心載入完成 ✅";
+
     window._ffmpegLoaded = true;
     window._myFFmpegInstance = ffmpeg;
-    transcodeMessage.textContent = 'FFmpeg 核心載入完成 ✅';
 
     return true;
   } catch (err) {
     console.error("FFmpeg 載入失敗:", err);
     transcodeMessage.textContent = `載入失敗：${err.message}`;
-    setTimeout(() => transcodeOverlay.style.display = 'none', 5000);
+    setTimeout(() => (transcodeOverlay.style.display = "none"), 5000);
     return false;
   }
 }
-
 
         // --- FFmpeg 轉碼函數 ---
         async function transcodeFile(file) {
