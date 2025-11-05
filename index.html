@@ -532,7 +532,7 @@ input[type="range"] {
             console.log(`Detected FPS: ${detectedFps}. Set assumed FPS to: ${assumedFPS}`);
         }
         
-        // --- FFmpeg 核心函數 (使用 v0.11.6 + 延遲 + 修正的建構函式查找) ---
+        // --- FFmpeg 核心函數 (*** 關鍵修正：使用 v0.11.6 API ***) ---
         async function loadFFmpeg() {
             if (ffmpegLoaded) return true;
             
@@ -541,8 +541,7 @@ input[type="range"] {
             transcodeProgressFill.style.width = `0%`;
             
             try {
-                // *** 關鍵修正 2: 檢查 v0.11.6 的 'createFFmpeg' ***
-                // v0.11.6 的正確用法是 `createFFmpeg`，它會返回一個 Promise
+                // 1. 檢查 v0.11.6 的 'createFFmpeg'
                 if (typeof window.FFmpeg === 'undefined' || typeof window.FFmpeg.createFFmpeg !== 'function') {
                     // 增加 100ms 延遲，確保 UMD 腳本完全初始化所有屬性 (解決 race condition)
                     await new Promise(resolve => setTimeout(resolve, 100));
@@ -552,18 +551,18 @@ input[type="range"] {
                     }
                 }
                 
-                // *** 關鍵修正 3: 使用 v0.11.6 的 createFFmpeg 實例化 ***
+                // 2. 使用 v0.11.6 的 createFFmpeg 實例化
                 ffmpeg = window.FFmpeg.createFFmpeg({
                     // 明確指定單執行緒核心檔案路徑
                     corePath: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.6/dist/ffmpeg-core.js',
                 });
                 
-                // *** 關鍵修正 4: v0.11.6 的事件監聽器是 .on() ***
+                // 3. 檢查 v0.11.6 的事件監聽器 .on()
                 if (typeof ffmpeg.on !== 'function') {
                     throw new TypeError("實例化的 FFmpeg 物件沒有 .on() 方法。");
                 }
 
-                // 設定進度報告
+                // 4. 設定進度報告 (v0.11.6 使用 ratio)
                 ffmpeg.on('log', ({ message }) => console.log(message));
                 ffmpeg.on('progress', ({ ratio }) => {
                     const percentage = Math.round(ratio * 100);
@@ -571,7 +570,7 @@ input[type="range"] {
                     transcodeMessage.textContent = `轉碼中... ${percentage}% 完成`;
                 });
                 
-                // *** 關鍵修正 5: v0.11.6 使用 ffmpeg.load() ***
+                // 5. v0.11.6 使用 ffmpeg.load()
                 await ffmpeg.load();
                 
                 ffmpegLoaded = true;
