@@ -333,7 +333,7 @@ input[type="range"] {
         
         <canvas id="videoCanvas" style="display:none;"></canvas>
         
-        <div id="title-watermark" class="overlay-info">TENG影片播放器w</div>
+        <div id="title-watermark" class="overlay-info">TENG影片播放器</div>
         <a id="image-tools-link" class="overlay-info" href="https://chia168168.github.io/TENG-image-tools-v3/">TENG圖片處理</a>
         
         <div class="controls-overlay" id="controlsOverlay"></div>
@@ -387,7 +387,7 @@ input[type="range"] {
     </div>
 </div>
 
-<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.9/dist/ffmpeg.min.js"></script>
 <script type="text/javascript" src="https://unpkg.com/mediainfo.js"></script>
 
 <script>
@@ -532,18 +532,17 @@ input[type="range"] {
             console.log(`Detected FPS: ${detectedFps}. Set assumed FPS to: ${assumedFPS}`);
         }
         
-        // --- FFmpeg 核心函數 (最終修正：使用 @ffmpeg/ffmpeg@0.11.6 的 corePath) ---
+        // --- FFmpeg 核心函數 (最終修正：升級到 v0.12.9 API) ---
         async function loadFFmpeg() {
             if (ffmpegLoaded) return true;
             
             transcodeOverlay.style.display = 'flex';
-            transcodeMessage.textContent = '載入 FFmpeg 核心檔案 (v0.11.6)...';
+            transcodeMessage.textContent = '載入 FFmpeg 核心檔案 (v0.12.9)...';
             transcodeProgressFill.style.width = `0%`;
             
             try {
-                // 1. 檢查 v0.11.6 的 'createFFmpeg'
+                // 1. 檢查 'createFFmpeg'
                 if (typeof window.FFmpeg === 'undefined' || typeof window.FFmpeg.createFFmpeg !== 'function') {
-                    // 增加 100ms 延遲，確保 UMD 腳本完全初始化所有屬性 (解決 race condition)
                     await new Promise(resolve => setTimeout(resolve, 100));
                     
                     if (typeof window.FFmpeg === 'undefined' || typeof window.FFmpeg.createFFmpeg !== 'function') {
@@ -551,26 +550,26 @@ input[type="range"] {
                     }
                 }
                 
-                // 2. 使用 v0.11.6 的 createFFmpeg 實例化
+                // 2. 使用 v0.12.9 的 createFFmpeg 實例化
                 ffmpeg = window.FFmpeg.createFFmpeg({
-                    // *** 關鍵修正 4: 更改 corePath 以匹配 @ffmpeg/ffmpeg 庫的結構 ***
-                    corePath: 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg-core.js',
+                    // *** 關鍵修正 2: 升級 corePath 到 @ffmpeg/core@0.12.9 的標準路徑 ***
+                    corePath: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.9/dist/ffmpeg-core.js',
                 });
                 
-                // 3. 檢查 v0.11.6 的事件監聽器
-                if (typeof ffmpeg.setLogger !== 'function' || typeof ffmpeg.setProgress !== 'function') {
-                    throw new TypeError("實例化的 FFmpeg 物件 API 不符 (v0.11.6)，缺少 setLogger/setProgress。");
+                // 3. 檢查 v0.12.9 的事件監聽器 API
+                if (typeof ffmpeg.on !== 'function') {
+                    throw new TypeError("實例化的 FFmpeg 物件 API 不符 (v0.12.9)，缺少 .on() 函式。");
                 }
 
-                // 4. 使用 v0.11.6 API (.setLogger / .setProgress)
-                ffmpeg.setLogger(({ message }) => console.log(message));
-                ffmpeg.setProgress(({ ratio }) => {
+                // 4. *** 關鍵修正 3：改用 v0.12.9 API (.on('log') / .on('progress')) ***
+                ffmpeg.on('log', ({ message }) => console.log(message));
+                ffmpeg.on('progress', ({ ratio }) => {
                     const percentage = Math.round(ratio * 100);
                     transcodeProgressFill.style.width = `${percentage}%`;
                     transcodeMessage.textContent = `轉碼中... ${percentage}% 完成`;
                 });
                 
-                // 5. v0.11.6 使用 ffmpeg.load()
+                // 5. 載入核心 (v0.12.9 仍使用 load())
                 await ffmpeg.load();
                 
                 ffmpegLoaded = true;
@@ -580,7 +579,7 @@ input[type="range"] {
             } catch (error) {
                 console.error("FFmpeg 載入失敗:", error);
                 // 針對 GitHub Pages 環境提供具體提示
-                transcodeMessage.textContent = `載入失敗。請檢查您的瀏覽器控制台是否有 CORS/Worker 錯誤。錯誤：${error.message}`;
+                transcodeMessage.textContent = `載入失敗。請檢查您的瀏覽器控制台是否有 CORS/Worker 錯誤。錯誤：${error.message}。請確認您使用的是 HTTPS 且 CDN 路徑正確。`;
                 setTimeout(() => transcodeOverlay.style.display = 'none', 5000);
                 return false;
             }
@@ -596,13 +595,13 @@ input[type="range"] {
             transcodeMessage.textContent = `正在準備檔案，請稍候...`;
 
             try {
-                // 1. 寫入檔案到 FFmpeg 虛擬檔案系統 (v0.11.6 使用 FS)
+                // 1. 寫入檔案到 FFmpeg 虛擬檔案系統 (v0.12.9 仍使用 FS)
                 await ffmpeg.FS('writeFile', inputFileName, new Uint8Array(await file.arrayBuffer()));
                 
                 transcodeMessage.textContent = `正在轉碼至 MP4 格式...`;
                 transcodeProgressFill.style.width = `0%`;
 
-                // 2. 執行轉碼命令 (v0.11.6 使用 run)
+                // 2. 執行轉碼命令 (v0.12.9 仍使用 run)
                 await ffmpeg.run(
                     '-i', inputFileName, 
                     '-c:v', 'libx264',   
@@ -613,14 +612,14 @@ input[type="range"] {
                     outputFileName
                 );
                 
-                // 3. 從虛擬檔案系統讀取結果檔案 (v0.11.6 使用 FS)
+                // 3. 從虛擬檔案系統讀取結果檔案 (v0.12.9 仍使用 FS)
                 const outputData = await ffmpeg.FS('readFile', outputFileName);
                 
                 // 4. 建立 Blob 和 URL
                 const blob = new Blob([outputData.buffer], { type: 'video/mp4' });
                 const fileURL = URL.createObjectURL(blob);
                 
-                // 5. 清理虛擬檔案系統 (v0.11.6 使用 FS)
+                // 5. 清理虛擬檔案系統 (v0.12.9 仍使用 FS)
                 await ffmpeg.FS('unlink', inputFileName);
                 await ffmpeg.FS('unlink', outputFileName);
 
