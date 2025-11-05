@@ -333,7 +333,7 @@ input[type="range"] {
         
         <canvas id="videoCanvas" style="display:none;"></canvas>
         
-        <div id="title-watermark" class="overlay-info">TENG影片播放器</div>
+        <div id="title-watermark" class="overlay-info">TENG影片播放器w</div>
         <a id="image-tools-link" class="overlay-info" href="https://chia168168.github.io/TENG-image-tools-v3/">TENG圖片處理</a>
         
         <div class="controls-overlay" id="controlsOverlay"></div>
@@ -557,14 +557,14 @@ input[type="range"] {
                     corePath: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.6/dist/ffmpeg-core.js',
                 });
                 
-                // 3. 檢查 v0.11.6 的事件監聽器 .on()
-                if (typeof ffmpeg.on !== 'function') {
-                    throw new TypeError("實例化的 FFmpeg 物件沒有 .on() 方法。");
+                // 3. 檢查 v0.11.6 的事件監聽器 .setLogger()
+                if (typeof ffmpeg.setLogger !== 'function' || typeof ffmpeg.setProgress !== 'function') {
+                    throw new TypeError("實例化的 FFmpeg 物件 API 不符 (v0.11.6)，缺少 setLogger/setProgress。");
                 }
 
-                // 4. 設定進度報告 (v0.11.6 使用 ratio)
-                ffmpeg.on('log', ({ message }) => console.log(message));
-                ffmpeg.on('progress', ({ ratio }) => {
+                // 4. *** 關鍵修正：使用 v0.11.6 API (.setLogger / .setProgress) ***
+                ffmpeg.setLogger(({ message }) => console.log(message));
+                ffmpeg.setProgress(({ ratio }) => {
                     const percentage = Math.round(ratio * 100);
                     transcodeProgressFill.style.width = `${percentage}%`;
                     transcodeMessage.textContent = `轉碼中... ${percentage}% 完成`;
