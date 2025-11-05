@@ -388,7 +388,7 @@ input[type="range"] {
 </div>
 
 <!-- 主程式 (UMD) -->
-<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.10.1/dist/ffmpeg.min.js"></script>
 
 <!-- 可選：MediaInfo -->
 <script src="https://unpkg.com/mediainfo.js"></script>
@@ -561,11 +561,10 @@ async function loadFFmpeg() {
   if (window._ffmpegLoaded) return true;
 
   transcodeOverlay.style.display = 'flex';
-  transcodeMessage.textContent = '載入 FFmpeg 核心檔案 (v0.11.6)...';
+  transcodeMessage.textContent = '載入 FFmpeg 核心檔案 (v0.10.1)...';
   transcodeProgressFill.style.width = `0%`;
 
   try {
-    // 確保主程式已載入
     await new Promise((resolve, reject) => {
       const start = Date.now();
       (function check() {
@@ -576,11 +575,10 @@ async function loadFFmpeg() {
       })();
     });
 
-    // ✅ v0.11.6 寫法：on() 已拿掉，要用 progress callback
+    // ✅ 改用 v0.10.1 的 corePath
     const ffmpeg = window.FFmpeg.createFFmpeg({
       log: true,
-      corePath:
-        "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.6/dist/ffmpeg-core.js",
+      corePath: "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.10.1/dist/ffmpeg-core.js",
       progress: ({ ratio }) => {
         const percentage = Math.round(ratio * 100);
         transcodeProgressFill.style.width = `${percentage}%`;
@@ -588,7 +586,6 @@ async function loadFFmpeg() {
       },
     });
 
-    // log 用 console 自行接
     console.log("⏳ 載入 FFmpeg 核心...");
     await ffmpeg.load();
     console.log("✅ FFmpeg 核心載入完成");
@@ -596,7 +593,6 @@ async function loadFFmpeg() {
 
     window._ffmpegLoaded = true;
     window._myFFmpegInstance = ffmpeg;
-
     return true;
   } catch (err) {
     console.error("FFmpeg 載入失敗:", err);
@@ -605,6 +601,7 @@ async function loadFFmpeg() {
     return false;
   }
 }
+
 
         // --- FFmpeg 轉碼函數 ---
         async function transcodeFile(file) {
