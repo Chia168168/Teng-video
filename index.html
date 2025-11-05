@@ -387,7 +387,7 @@ input[type="range"] {
     </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/ffmpeg/0.12.15/umd/ffmpeg.min.js"></script>
+<script src="https://app.unpkg.com/@ffmpeg/core@0.12.10/files/dist/umd/ffmpeg-core.js"></script>
 <script src="https://unpkg.com/mediainfo.js"></script>
 
 <script>
@@ -567,7 +567,7 @@ input[type="range"] {
                 // 2. 使用 createFFmpeg 實例化
                 ffmpeg = window.FFmpeg.createFFmpeg({
                     // *** 關鍵修正：將核心路徑從 jsdelivr 替換為 unpkg ***
-                    corePath: 'https://unpkg.com/@ffmpeg/core@0.12.15/dist/ffmpeg-core.js',
+                    corePath: 'https://app.unpkg.com/@ffmpeg/core@0.12.10/files/dist/umd/ffmpeg-core.js',
                 });
                 
                 // 3. 註冊事件監聽器
