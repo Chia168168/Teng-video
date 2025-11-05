@@ -333,7 +333,7 @@ input[type="range"] {
         
         <canvas id="videoCanvas" style="display:none;"></canvas>
         
-        <div id="title-watermark" class="overlay-info">TENG影片播放器wmv</div>
+        <div id="title-watermark" class="overlay-info">TENG影片播放器</div>
         <a id="image-tools-link" class="overlay-info" href="https://chia168168.github.io/TENG-image-tools-v3/">TENG圖片處理</a>
         
         <div class="controls-overlay" id="controlsOverlay"></div>
@@ -546,11 +546,19 @@ input[type="range"] {
                     throw new Error("FFmpeg 物件未定義，請檢查腳本是否載入失敗。");
                 }
                 
-                // *** 關鍵修正：透過檢查 FFmpeg.FFmpeg 或 FFmpeg 來找到真正的 constructor ***
-                const FFmpegConstructor = window.FFmpeg.FFmpeg || window.FFmpeg; 
+                // *** 關鍵修正：最穩健地尋找 FFmpeg 建構函式 (v0.11.6 UMD 兼容) ***
+                let FFmpegConstructor = null;
                 
-                if (typeof FFmpegConstructor !== 'function') {
-                    throw new TypeError("FFmpeg 物件已載入，但不是一個可實例化的 constructor。");
+                if (typeof window.FFmpeg === 'function') {
+                    FFmpegConstructor = window.FFmpeg; // 優先：FFmpeg 直接是建構函式 (標準方式)
+                } else if (window.FFmpeg && typeof window.FFmpeg.FFmpeg === 'function') {
+                    FFmpegConstructor = window.FFmpeg.FFmpeg; // 次要：FFmpeg 建構函式被巢狀包裹
+                } else if (window.FFmpeg && typeof window.FFmpeg.default === 'function') {
+                    FFmpegConstructor = window.FFmpeg.default; // 備選：UMD/ESM 預設導出
+                }
+                
+                if (!FFmpegConstructor) {
+                    throw new TypeError("FFmpeg 物件已載入，但無法確認建構函式。請檢查瀏覽器控制台中的 'window.FFmpeg' 結構。");
                 }
                 
                 // 實例化 FFmpeg
