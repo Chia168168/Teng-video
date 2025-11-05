@@ -557,47 +557,83 @@ input[type="range"] {
         }
         
         // --- FFmpeg 核心載入函數 (變更 corePath) ---
+// 替換您的 loadFFmpeg 函數
 async function loadFFmpeg() {
   if (window._ffmpegLoaded) return true;
 
   transcodeOverlay.style.display = 'flex';
-  transcodeMessage.textContent = '載入 FFmpeg 核心檔案 (v0.10.1)...';
+  transcodeMessage.textContent = '載入 FFmpeg 核心檔案...';
   transcodeProgressFill.style.width = `0%`;
 
   try {
+    // 等待 FFmpeg 庫載入
     await new Promise((resolve, reject) => {
       const start = Date.now();
       (function check() {
         if (window.FFmpeg?.createFFmpeg) return resolve();
-        if (Date.now() - start > 15000)
+        if (Date.now() - start > 20000)
           return reject(new Error("FFmpeg 主程式載入超時"));
         setTimeout(check, 200);
       })();
     });
 
-    // ✅ 改用 v0.10.1 的 corePath
-    const ffmpeg = window.FFmpeg.createFFmpeg({
-      log: true,
-      corePath: "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.10.1/dist/ffmpeg-core.js",
-      progress: ({ ratio }) => {
-        const percentage = Math.round(ratio * 100);
-        transcodeProgressFill.style.width = `${percentage}%`;
-        transcodeMessage.textContent = `轉碼中... ${percentage}% 完成`;
-      },
-    });
+    // 使用多個備用 CDN
+    const corePaths = [
+      "https://unpkg.com/@ffmpeg/core@0.10.1/dist/ffmpeg-core.js",
+      "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.10.1/dist/ffmpeg-core.js",
+      "https://fastly.jsdelivr.net/npm/@ffmpeg/core@0.10.1/dist/ffmpeg-core.js"
+    ];
 
-    console.log("⏳ 載入 FFmpeg 核心...");
-    await ffmpeg.load();
-    console.log("✅ FFmpeg 核心載入完成");
-    transcodeMessage.textContent = "FFmpeg 核心載入完成 ✅";
+    let ffmpeg = null;
+    let lastError = null;
+
+    // 嘗試多個 CDN
+    for (const corePath of corePaths) {
+      try {
+        console.log(`嘗試載入: ${corePath}`);
+        ffmpeg = window.FFmpeg.createFFmpeg({
+          log: true,
+          corePath: corePath,
+          progress: ({ ratio }) => {
+            const percentage = Math.round(ratio * 100);
+            transcodeProgressFill.style.width = `${percentage}%`;
+            transcodeMessage.textContent = `載入中... ${percentage}%`;
+          },
+        });
+
+        await ffmpeg.load();
+        console.log("✅ FFmpeg 核心載入完成");
+        break;
+      } catch (err) {
+        console.warn(`CDN 失敗: ${corePath}`, err);
+        lastError = err;
+        continue;
+      }
+    }
+
+    if (!ffmpeg || !ffmpeg.loaded) {
+      throw lastError || new Error("所有 CDN 載入失敗");
+    }
 
     window._ffmpegLoaded = true;
     window._myFFmpegInstance = ffmpeg;
+    transcodeMessage.textContent = "FFmpeg 核心載入完成 ✅";
+    
+    // 延遲隱藏轉碼介面
+    setTimeout(() => {
+      transcodeOverlay.style.display = "none";
+    }, 1000);
+    
     return true;
   } catch (err) {
     console.error("FFmpeg 載入失敗:", err);
-    transcodeMessage.textContent = `載入失敗：${err.message}`;
-    setTimeout(() => (transcodeOverlay.style.display = "none"), 5000);
+    transcodeMessage.textContent = `載入失敗，請重新整理頁面或使用支援的影片格式`;
+    
+    // 顯示錯誤但允許繼續使用基本功能
+    setTimeout(() => {
+      transcodeOverlay.style.display = "none";
+    }, 3000);
+    
     return false;
   }
 }
